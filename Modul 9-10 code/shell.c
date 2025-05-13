@@ -12,20 +12,45 @@ char *takeInput();
 void parseInput(char *input);
 void landingPage();
 
-// SIGNAL HANDLING (diletakkan DI LUAR main)
-void handle_sigint(int sig) {
-    printf("\nNggak bisa keluar pake Ctrl+C ya! Ketik 'exit' dong.\nnetlab>> ");
+void sigint_handler(int sig) {
+    printf("\n[!] Jangan menyerah! Shell tetap berjalan\n");
+    printf("netlab> ");
     fflush(stdout);
 }
 
-void handle_sigtstp(int sig) {
-    printf("\nShell ini nggak bisa di-pause! 😎\nnetlab>> ");
+void sigtstp_handler(int sig) {
+    time_t t;
+    time(&t);
+    printf("\n[PAUSE] %s", ctime(&t));
+    printf("[TIP] Gunakan 'help' untuk melihat command yang tersedia\n");
+    printf("netlab> ");
     fflush(stdout);
 }
 
+void sigchld_handler(int sig) {
+    // Prevent zombie process
+    while (waitpid(-1, NULL, WNOHANG) > 0);
+}
+
+void sigquit_handler(int sig) {
+    char ans;
+    printf("\n[?] Yakin ingin keluar? (y/n): ");
+    ans = getchar();
+    if (ans == 'y' || ans == 'Y') {
+        printf("Keluar dari shell... \n");
+        exit(0);
+    } else {
+        // Flush extra characters like newline from input buffer
+        while ((getchar()) != '\n');
+        printf("netlab> ");
+        fflush(stdout);
+    }
+}
 int main() {
-    signal(SIGINT, handle_sigint);
-    signal(SIGTSTP, handle_sigtstp);
+    signal(SIGINT, sigint_handler);    // Ctrl+C
+    signal(SIGTSTP, sigtstp_handler);  // Ctrl+Z
+    signal(SIGCHLD, sigchld_handler);  // child selesai
+    signal(SIGQUIT, sigquit_handler); 
 
     landingPage(); 
 
